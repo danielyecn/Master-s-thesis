@@ -1,0 +1,57 @@
+clear 
+cd "/Users/Daniel/Documents/Academic_Master/G5999_Master_thesis/Data"
+
+import excel data_ec.xls, firstrow
+keep if IndicatorCode == "NY.GDP.MKTP.KD.ZG"
+
+reshape long year, i(CountryCode) j(year2)
+
+rename year gdp
+rename year2 year
+
+save "growth", replace
+clear 
+
+import excel data_ec.xls, firstrow
+keep if IndicatorCode == "PX.REX.REER"
+
+reshape long year, i(CountryCode) j(year2)
+
+rename year exchange
+rename year2 year
+
+save "exchange", replace
+merge 1:m CountryCode year using "growth"
+
+replace CountryCode="1" if CountryCode == "CHN"
+replace CountryCode="2" if CountryCode == "COL"
+replace CountryCode="3" if CountryCode == "MEX"
+replace CountryCode="4" if CountryCode == "MYS"
+replace CountryCode="5" if CountryCode == "PHL"
+replace CountryCode="6" if CountryCode == "ZAF"
+
+destring CountryCode, replace
+
+gen ex_scaled=exchange/100
+forval i=1/6 {
+
+local name: word `i' of China Colombia Malaysia Mexico Philippines South_Africa
+
+reg ex_scaled gdp if CountryCode ==`i'
+sort ex_scaled gdp
+scatter ex_scaled gdp if CountryCode==`i'|| lfitci ex_scaled gdp, title(`name')
+graph save gr_`i'.gph, replace
+}
+
+
+
+graph combine gr_1.gph gr_2.gph gr_3.gph gr_4.gph gr_5.gph gr_6.gph, col(3) title("GDP growth rate and Real Exchange rate OLS in Emerging Countries",size(small))
+/*forval i=1/6{
+
+reg gdp exchange if CountryCode==`i'
+sort exchange gdp
+graph twoway line gdp exchange if CountryCode==`i'
+}
+*/
+reg ex_scaled gdp
+scatter ex_scaled gdp || lfitci ex_scaled gdp, title("Overall regression")
